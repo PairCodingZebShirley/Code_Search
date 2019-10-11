@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" serverName="v-zhihu@10.190.172.25:22">
+    <serverData>
+      <paths name="v-zhihu@10.190.172.25:22">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/tmp/pycharm_project_642" local="$PROJECT_DIR$" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath path="/home/v-zhihu/code/deep-code-search/pytorch/data" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
+    </serverData>
+  </component>
+</project>
