@@ -100,7 +100,7 @@ class CodeSearcher:
             itr = 1
             losses = []
             for names, apis, toks, good_descs, bad_descs in data_loader:
-                names, apis, toks, good_descs, bad_descs = [tensor.to(self.device) for tensor in
+                names, apis, toks, good_descs, bad_descs = [tensor.cuda() for tensor in
                                                             [names, apis, toks, good_descs, bad_descs]]
                 loss = model(names, apis, toks, good_descs, bad_descs)
                 losses.append(loss.item())
@@ -188,7 +188,7 @@ class CodeSearcher:
         model.eval()
         accs, mrrs, maps, ndcgs = [], [], [], []
         for names, apis, toks, descs, _ in tqdm(data_loader):
-            names, apis, toks, descs = [tensor.to(self.device) for tensor in [names, apis, toks, descs]]
+            names, apis, toks, descs = [tensor.cuda() for tensor in [names, apis, toks, descs]]
             code_repr = model.code_encoding(names, apis, toks)
             for i in range(poolsize):
                 desc = descs[i].expand(poolsize, -1)
@@ -221,7 +221,7 @@ class CodeSearcher:
         data_loader = torch.utils.data.DataLoader(dataset=use_set, batch_size=1000,
                                                   shuffle=False, drop_last=False, num_workers=1)
         for names, apis, toks in data_loader:
-            names, apis, toks = [tensor.to(self.device) for tensor in [names, apis, toks]]
+            names, apis, toks = [tensor.cuda() for tensor in [names, apis, toks]]
             reprs = model.code_encoding(names, apis, toks).data.cpu().numpy()
             vecs = reprs if vecs is None else np.concatenate((vecs, reprs), 0)
         vecs = normalize(vecs)
@@ -232,7 +232,7 @@ class CodeSearcher:
         model.eval()
         desc = sent2indexes(query, self.vocab_desc)  # convert desc sentence into word indices
         desc = np.expand_dims(desc, axis=0)
-        desc = torch.from_numpy(desc).to(self.device)
+        desc = torch.from_numpy(desc).cuda()
         desc_repr = model.desc_encoding(desc).data.cpu().numpy()
 
         codes = []
@@ -276,18 +276,21 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
-    device = torch.device(f"cuda:{args.gpu_id}" if torch.cuda.is_available() else "cpu")
+    # device = torch.device(f"cuda:{args.gpu_id}" if torch.cuda.is_available() else "cpu")
     conf = get_config("config.json")
     searcher = CodeSearcher(conf)
-    searcher.device = device
+    # searcher.device = device
 
     ##### Define model ######
+    devices = conf["gpus"]
+    torch.cuda.set_device(devices[0])
     logger.info('Build Model')
     model = getattr(models, args.model)(conf)  # initialize the model
+    model = torch.nn.parallel.DataParallel(model, device_ids=devices)
     if conf['reload'] > 0:
         searcher.load_model(model, conf['reload'])
 
-    model = model.to(device)
+    model.cuda()
 
     optimizer = optim.Adam(model.parameters(), lr=conf['lr'])
 
