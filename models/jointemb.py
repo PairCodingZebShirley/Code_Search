@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 parentPath = os.path.abspath("..")
 sys.path.insert(0, parentPath)  # add parent folder to path so as to import common modules
 from modules import SeqEncoder, BOWEncoder
+from args import parser
+args = parser.parse_args()
 
 
 class JointEmbeder(nn.Module):
@@ -51,9 +53,18 @@ class JointEmbeder(nn.Module):
         code_repr = self.code_encoding(name, apiseq, tokens)
         desc_good_repr = self.desc_encoding(desc_good)
         desc_bad_repr = self.desc_encoding(desc_bad)
+        if args.debug:
+            print("code_repr output shape: ", code_repr.shape)
+            print("desc_good_repr output shape: ", desc_good_repr.shape)
+            print("desc_bad_repr output shape: ", desc_bad_repr.shape)
 
         good_sim = F.cosine_similarity(code_repr, desc_good_repr)
         bad_sim = F.cosine_similarity(code_repr, desc_bad_repr)  # [batch_sz x 1]
+        if args.debug:
+            print("good_sim output shape: ", good_sim.shape)
+            print("bad_sim output shape: ", bad_sim.shape)
 
         loss = (self.margin - good_sim + bad_sim).clamp(min=1e-6).mean()
+        if args.debug:
+            print("return loss shape: ", loss.shape)
         return loss

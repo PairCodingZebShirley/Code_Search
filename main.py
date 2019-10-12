@@ -25,6 +25,9 @@ from utils import cos_np, normalize, dot_np, sent2indexes
 from configs import get_config
 from data_loader import load_dict, CodeSearchDataset, load_vecs, save_vecs
 import models
+from args import parser
+
+args = parser.parse_args()
 
 
 class CodeSearcher:
@@ -102,6 +105,13 @@ class CodeSearcher:
             for names, apis, toks, good_descs, bad_descs in data_loader:
                 names, apis, toks, good_descs, bad_descs = [tensor.cuda() for tensor in
                                                             [names, apis, toks, good_descs, bad_descs]]
+                if args.debug:
+                    print("input shape: names:{}, apis: {}, tokens{}, good_descs{}, bad_descs{}".format(names.shape,
+                                                                                                           apis.shape,
+                                                                                                           toks.shape,
+                                                                                                           good_descs.shape,
+                                                                                                           bad_descs.shape))
+
                 loss = model(names, apis, toks, good_descs, bad_descs)
                 losses.append(loss.item())
                 optimizer.zero_grad()
@@ -261,21 +271,9 @@ class CodeSearcher:
         sims.extend(chunk_sims)
 
 
-def parse_args():
-    parser = argparse.ArgumentParser("Train and Test Code Search(Embedding) Model")
-    parser.add_argument('--model', type=str, default='JointEmbeder', help='model name')
-    parser.add_argument("--mode", choices=["train", "eval", "repr_code", "search"], default='train',
-                        help="The mode to run. The `train` mode trains a model;"
-                             " the `eval` mode evaluat models in a test set "
-                             " The `repr_code/repr_desc` mode computes vectors"
-                             " for a code snippet or a natural language description with a trained model.")
-    # parser.add_argument('--gpu_id', type=int, default=0, help='GPU ID')
-    parser.add_argument("--verbose", action="store_true", default=True, help="Be verbose")
-    return parser.parse_args()
 
 
 if __name__ == '__main__':
-    args = parse_args()
     # device = torch.device(f"cuda:{args.gpu_id}" if torch.cuda.is_available() else "cpu")
     conf = get_config("config.json")
     searcher = CodeSearcher(conf)

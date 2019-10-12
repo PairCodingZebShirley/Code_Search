@@ -5,7 +5,7 @@
       <paths name="v-zhihu@10.190.172.25:22">
         <serverdata>
           <mappings>
-            <mapping deploy="/tmp/pycharm_project_642" local="$PROJECT_DIR$" />
+            <mapping deploy="/home/v-zhihu/code/deep-code-search/pytorch" local="$PROJECT_DIR$" />
           </mappings>
           <excludedPaths>
             <excludedPath path="/home/v-zhihu/code/deep-code-search/pytorch/data" />

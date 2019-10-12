@@ -44,5 +44,5 @@
     "init_embed_weights_desc": null,
     "margin": 0.05,
     "sim_measure": "cos",
-    "gpus": [0, 1, 2, 3]
+    "gpus": [0]
 }

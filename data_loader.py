@@ -7,6 +7,9 @@ import json
 import random
 import numpy as np
 import pickle
+from args import parser
+
+args = parser.parse_args()
 
 use_cuda = torch.cuda.is_available()
 
@@ -83,7 +86,6 @@ class CodeSearchDataset(data.Dataset):
             len, pos = self.idx_descs[rand_offset]['length'], self.idx_descs[rand_offset]['pos']
             bad_desc = self.descs[pos:pos + len].astype('int64')
             bad_desc = self.pad_seq(bad_desc, self.desc_len)
-
             return name, apiseq, tokens, good_desc, bad_desc
         else:
             return name, apiseq, tokens
