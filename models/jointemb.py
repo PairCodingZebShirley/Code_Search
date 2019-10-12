@@ -64,7 +64,8 @@ class JointEmbeder(nn.Module):
             print("good_sim output shape: ", good_sim.shape)
             print("bad_sim output shape: ", bad_sim.shape)
 
-        loss = (self.margin - good_sim + bad_sim).clamp(min=1e-6).mean()
+        # loss = (self.margin - good_sim + bad_sim).clamp(min=1e-6).mean()
+        loss = (self.margin - good_sim + bad_sim).clamp(min=1e-6)
         if args.debug:
             print("return loss shape: ", loss.shape)
         return loss

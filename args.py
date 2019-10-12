@@ -12,3 +12,4 @@ parser.add_argument("--mode", choices=["train", "eval", "repr_code", "search"], 
 parser.add_argument("--verbose", action="store_true", default=True, help="Be verbose")
 parser.add_argument("--debug", default=False, action="store_true",
                     help="enable debug mode to see the hidden variable results")
+parser.add_argument('--gpus', default=[0, 1, 2, 3], nargs='+', type=int)

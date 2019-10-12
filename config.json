@@ -22,7 +22,7 @@
     "vocab_api": "vocab.apiseq.pkl",
     "vocab_tokens": "vocab.tokens.pkl",
     "vocab_desc": "vocab.desc.pkl",
-    "batch_size": 128,
+    "batch_size": 512,
     "chunk_size": 100000,
     "nb_epoch": 500,
     "validation_split": 0.2,
@@ -43,6 +43,5 @@
     "init_embed_weights_tokens": null,
     "init_embed_weights_desc": null,
     "margin": 0.05,
-    "sim_measure": "cos",
-    "gpus": [0]
+    "sim_measure": "cos"
 }

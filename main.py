@@ -100,6 +100,7 @@ class CodeSearcher:
         val_loss = {'loss': 1., 'epoch': 0}
 
         for epoch in range(self.conf['reload'] + 1, nb_epoch):
+            model.train()
             itr = 1
             losses = []
             for names, apis, toks, good_descs, bad_descs in data_loader:
@@ -107,12 +108,15 @@ class CodeSearcher:
                                                             [names, apis, toks, good_descs, bad_descs]]
                 if args.debug:
                     print("input shape: names:{}, apis: {}, tokens{}, good_descs{}, bad_descs{}".format(names.shape,
-                                                                                                           apis.shape,
-                                                                                                           toks.shape,
-                                                                                                           good_descs.shape,
-                                                                                                           bad_descs.shape))
+                                                                                                        apis.shape,
+                                                                                                        toks.shape,
+                                                                                                        good_descs.shape,
+                                                                                                        bad_descs.shape))
 
                 loss = model(names, apis, toks, good_descs, bad_descs)
+                if args.debug:
+                    print("loss output shape: ", loss.shape)
+                loss = loss.mean()
                 losses.append(loss.item())
                 optimizer.zero_grad()
                 loss.backward()
@@ -122,9 +126,17 @@ class CodeSearcher:
                     losses = []
                 itr = itr + 1
 
-                #      if epoch and epoch % valid_every == 0:
-            #          logger.info("validating..")
-            #          acc1, mrr, map, ndcg = self.eval(model,1000,1)
+            if epoch and epoch % valid_every == 0:
+                logger.info("validating..")
+                acc1, mrr, map, ndcg = self.eval(model, 1000, 1)
+                output = ('epoch{}\t'
+                          'acc1{}\t'
+                          'mrr{}\t'
+                          'map{}\t'
+                          'ndcg{}\t'
+                          .format(epoch,acc1, mrr, map, ndcg))
+                with open(os.path.join("result", "eval_log.csv"), "a") as f:
+                    f.write(output + "\n")
 
             if epoch and epoch % save_every == 0:
                 self.save_model(model, epoch)
@@ -197,25 +209,30 @@ class CodeSearcher:
                                                   shuffle=True, drop_last=True, num_workers=1)
         model.eval()
         accs, mrrs, maps, ndcgs = [], [], [], []
-        for names, apis, toks, descs, _ in tqdm(data_loader):
-            names, apis, toks, descs = [tensor.cuda() for tensor in [names, apis, toks, descs]]
-            code_repr = model.code_encoding(names, apis, toks)
-            for i in range(poolsize):
-                desc = descs[i].expand(poolsize, -1)
-                desc_repr = model.desc_encoding(desc)
-                n_results = K
-                sims = F.cosine_similarity(code_repr, desc_repr).data.cpu().numpy()
-                negsims = np.negative(sims)
-                predict = np.argsort(negsims)  # predict = np.argpartition(negsims, kth=n_results-1)
-                predict = predict[:n_results]
-                predict = [int(k) for k in predict]
-                real = [i]
-                accs.append(ACC(real, predict))
-                mrrs.append(MRR(real, predict))
-                maps.append(MAP(real, predict))
-                ndcgs.append(NDCG(real, predict))
-        logger.info(
-            'ACC={}, MRR={}, MAP={}, nDCG={}'.format(np.mean(accs), np.mean(mrrs), np.mean(maps), np.mean(ndcgs)))
+        with torch.no_grad():
+            for names, apis, toks, descs, _ in tqdm(data_loader):
+                names, apis, toks, descs = [tensor.cuda() for tensor in [names, apis, toks, descs]]
+                if args.debug:
+                    print("eval input data: names{}, apis{}, toks{}, descs{}".format(names.shape, apis.shape, toks.shape,
+                                                                                     descs.shape))
+                code_repr = model.module.code_encoding(names, apis, toks)
+                for i in range(poolsize):
+                    desc = descs[i].expand(poolsize, -1)
+
+                    desc_repr = model.module.desc_encoding(desc)
+                    n_results = K
+                    sims = F.cosine_similarity(code_repr, desc_repr).data.cpu().numpy()
+                    negsims = np.negative(sims)
+                    predict = np.argsort(negsims)  # predict = np.argpartition(negsims, kth=n_results-1)
+                    predict = predict[:n_results]
+                    predict = [int(k) for k in predict]
+                    real = [i]
+                    accs.append(ACC(real, predict))
+                    mrrs.append(MRR(real, predict))
+                    maps.append(MAP(real, predict))
+                    ndcgs.append(NDCG(real, predict))
+            logger.info(
+                'ACC={}, MRR={}, MAP={}, nDCG={}'.format(np.mean(accs), np.mean(mrrs), np.mean(maps), np.mean(ndcgs)))
 
         return np.mean(accs), np.mean(mrrs), np.mean(maps), np.mean(ndcgs)
 
@@ -271,8 +288,6 @@ class CodeSearcher:
         sims.extend(chunk_sims)
 
 
-
-
 if __name__ == '__main__':
     # device = torch.device(f"cuda:{args.gpu_id}" if torch.cuda.is_available() else "cpu")
     conf = get_config("config.json")
@@ -280,7 +295,7 @@ if __name__ == '__main__':
     # searcher.device = device
 
     ##### Define model ######
-    devices = conf["gpus"]
+    devices = args.gpus
     torch.cuda.set_device(devices[0])
     logger.info('Build Model')
     model = getattr(models, args.model)(conf)  # initialize the model
@@ -293,6 +308,8 @@ if __name__ == '__main__':
     optimizer = optim.Adam(model.parameters(), lr=conf['lr'])
 
     if args.mode == 'train':
+        if args.debug:
+            searcher.eval(model, 1000, 1)
         searcher.train(model)
 
     elif args.mode == 'eval':
